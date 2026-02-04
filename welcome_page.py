@@ -20,7 +20,7 @@ def show_consent_section():
     st.markdown('<div class="subtitle">Benvenuto/a nel nostro studio di ricerca!</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    Stiamo STUDIANDO **come le persone apprendono e ricordano le opere d'arte** attraverso diverse tipologie di descrizioni.
+    Stiamo studiando **come le persone apprendono e ricordano le opere d'arte** attraverso diverse tipologie di descrizioni.
 
     **Tempo stimato:** 25-30 minuti
     """)
