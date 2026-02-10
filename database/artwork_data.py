@@ -32,16 +32,16 @@ visive di simboli che emergono dalla profondità dell'anima umana" (Lajos Német
 """
     },
     {
- "id": "24610-moneylen.jpg",
-    "title": "Il cambiavalute e sua moglie", 
-    "artist": "Quentin Massys",
-    "year": "1514",
-    "style": "Olio su tavola, 71 x 68 cm",
-    "image_url": "24610-moneylen.jpg",
-    "standard_description": """
+        "id": "24610-moneylen.jpg",
+        "title": "Il cambiavalute e sua moglie", 
+        "artist": "Quentin Massys",
+        "year": "1514",
+        "style": "Olio su tavola, 71 x 68 cm",
+        "image_url": "24610-moneylen.jpg",
+        "standard_description": """
 In una certa misura in opposizione ai Romanisti tra i suoi contemporanei, Massys rimase fedele
 alle tradizioni stabilite dall'arte fiamminga primitiva. Tuttavia, le influenze italiane, alle quali fu esposto 
-solo indirettamente, si fanno sentire nella monumentalizzazione delle sue figure.
+solo indirettamente, si fanno sentire nella monumentalizzazione delle suas figure.
 Il Banchiere e sua Moglie è un esempio precoce della pittura di genere che fiorirà nelle Fiandre e nei Paesi Bassi 
 settentrionali nel corso del XVI secolo. Seduti dietro il tavolo, e entrambi parzialmente tagliati su un lato dalla cornice, 
 le figure sono posizionate arretrate rispetto al bordo anteriore del dipinto. Sebbene sofisticate nelle loro sfumature cromatiche, 
@@ -72,7 +72,7 @@ e alcuni rametti sulla fronte formano le corna. Questo ceppo d'albero, privo di 
 rappresenta l'inverno, che non produce nulla di per sé, ma dipende dalle produzioni delle altre stagioni.
 Un piccolo fiore sul suo petto e sopra le sue spalle simboleggia la primavera, così come un mazzo di spighe legato 
 ad alcuni rametti, e un mantello di paglia intrecciata che gli copre le spalle, e due ciliegie pendenti da un ramo 
-che formano il suo orecchio, e due prugne sulla nuca rappresentano l'estate.
+che formano il suo orecchio, e deux prugne sulla nuca rappresentano l'estate.
 E due grappoli d'uva pendenti da un rametto, uno bianco e uno rosso, e alcune mele, nascoste tra l'edera 
 sempreverde che germoglia dalla sua testa, simboleggiano l'autunno.
 Tra i rami nella testa, uno al centro sta perdendo un po' della sua corteccia, e pezzi di essa sono piegati 
@@ -119,8 +119,14 @@ def get_artwork_description(artwork, experimental_group, top_interests):
     generator = DescriptionGenerator()
    
     artwork_id = artwork['id']
+    
+    # Inizializza le variabili
+    description = None
+    selected_interest = None
+    
+    # Controlla la cache
     cached_descriptions = st.session_state.get('generated_descriptions', {})
-
+    
     if artwork_id in cached_descriptions:
         cached = cached_descriptions[artwork_id]
         same_artwork = (
@@ -132,13 +138,16 @@ def get_artwork_description(artwork, experimental_group, top_interests):
 
         if same_artwork and same_group and same_interests:
             return cached['description'], cached.get('selected_interest')
+    
+    # Genera nuova descrizione
+    description = generator.get_negative_personalized_description(artwork)
+    selected_interest = None
         
-        description = generator.get_negative_personalized_description(artwork)
-        selected_interest = None
-        
+    # Inizializza cache se non esiste
     if 'generated_descriptions' not in st.session_state:
         st.session_state.generated_descriptions = {}
     
+    # Salva in cache
     st.session_state.generated_descriptions[artwork_id] = {
         'description': description,
         'experimental_group': experimental_group,
