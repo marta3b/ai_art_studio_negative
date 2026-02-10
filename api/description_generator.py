@@ -51,23 +51,31 @@ class DescriptionGenerator:
     def _call_openrouter_api(self, prompt, retries=3):
         for attempt in range(retries):    
             try:
+                # System message FORTE e DIRETTO
                 messages = [
                     {
                         "role": "system",
-                        "content": """SEI UNA GUIDA MUSEALE. Scrivi descrizioni FLUIDE e NARRATIVE.
+                        "content": """TU SCRIVI DESCRIZIONI MOLTO BREVI.
                         
-    CARATTERISTICHE DELLE TUE DESCRIZIONI:
-    1. SONO RACCONTI, non elenchi
-    2. INTEGRANO i fatti nella narrazione
-    3. Hanno un FLUSSO LOGICO (inizio-sviluppo-conclusione)
-    4. Usano TRANSIZIONI tra le idee
-    5. Sono CONCISE ma COMPLETE
+    REGOLE ASSOLUTE:
+    1. Usa SOLO le informazioni fornite dall'utente
+    2. NIENTE aggiunte creative
+    3. NIENTE aggettivi descrittivi
+    4. NIENTE contesto storico
+    5. FRASI BREVI (max 12 parole)
+    6. Solo fatti, niente opinioni
 
-    NON SCRIVERE come un manuale o un quiz.
-    SCRIVI come se stessi raccontando l'opera a un visitatore."""
+    ESEMPIO DI COME SCRIVI:
+    "Artista, 'Titolo' (anno). Tecnica.
+
+    Elemento 1. Elemento 2. Elemento 3.
+
+    Significato 1. Significato 2."
+
+    SE L'UTENTE DICE 150 PAROLE, NON SUPERARE 150 PAROLE."""
                     },
                     {
-                        "role": "user",
+                        "role": "user", 
                         "content": prompt
                     }
                 ]
@@ -82,14 +90,25 @@ class DescriptionGenerator:
                     },
                     data=json.dumps({
                         "model": "openai/gpt-4o-mini-2024-07-18",
+                        # PROVA QUESTI MODELLI SE GPT NON OBBEDISCE:
+                        # "model": "google/gemini-flash-1.5",  # Molto obbediente
+                        # "model": "meta-llama/llama-3-8b-instruct",  # Segue bene istruzioni
                         "messages": messages,
-                        "max_tokens": 500,
-                        "temperature": 0.5,  # Un po' più creativo per la narrazione
-                        "top_p": 0.9,
-                        "frequency_penalty": 0.3,  # Meno penalità per fluidità
-                        "presence_penalty": 0.3
+                        "max_tokens": 250,  # MOLTO RIDOTTO: forza brevità (~150 parole)
+                        "temperature": 0.0,  # ZERO CREATIVITÀ - massima obbedienza
+                        "top_p": 0.1,       # Limita drasticamente scelte creative
+                        "frequency_penalty": 1.5,  # ALTO: penalizza verbosità e ripetizioni
+                        "presence_penalty": 1.5,   # ALTO: penalizza contenuto non rilevante
+                        "stop": [
+                            "\n\nNote:", 
+                            "Inoltre", 
+                            "Infatti", 
+                            "Va notato che",
+                            "È interessante",
+                            "Si tratta di"
+                        ]
                     }),
-                    timeout=60
+                    timeout=30
                 )
                 
                 response.raise_for_status()
@@ -97,98 +116,88 @@ class DescriptionGenerator:
                 
                 if "choices" in result and result["choices"]:
                     content = result["choices"][0]["message"]["content"]
+                    
+                    # Log della lunghezza per debug
+                    word_count = len(content.split())
+                    print(f"DEBUG: API generato {word_count} parole")
+                    
                     return content
                 else:
+                    print(f"DEBUG: Risposta API senza 'choices'")
                     return None
                     
-            except Exception as e:
+            except requests.exceptions.Timeout:
+                print(f"DEBUG: Timeout tentativo {attempt + 1}")
                 if attempt < retries - 1:
-                    time.sleep(2)
+                    time.sleep(1)
                     continue
-                return None
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"DEBUG: Errore richiesta: {e}")
+                if attempt < retries - 1:
+                    time.sleep(1)
+                    continue
+                    
+            except Exception as e:
+                print(f"DEBUG: Errore generico: {type(e).__name__}")
+                if attempt < retries - 1:
+                    time.sleep(1)
+                    continue
+        
+        print(f"DEBUG: Tutti i {retries} tentativi falliti")
+        return None
     
     def get_negative_personalized_description(self, artwork_data):
         if self.use_real_api:
             artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
             
-            # Raccogli i fatti in modo più strutturato
-            facts_list = [f.strip('- ') for f in artwork_specific_facts.strip().split('\n') if f.strip()]
-            
             prompt = f"""
-    Scrivi una breve descrizione museale dell'opera che SIA UNA NARRAZIONE COESA, non un elenco di fatti.
+Scrivi una descrizione MOLTO CONCISA dell'opera.
 
-    ## LA DESCRIZIONE DEVE:
-    1. Raccontare l'opera in modo FLUIDO e NATURALE
-    2. Essere CONCISA (circa 200 parole)
-    3. Avere un INIZIO, SVILUPPO e CONCLUSIONE
-    4. Integrare i fatti nella narrazione
+## INFORMAZIONI DA USARE (SOLO QUESTE):
+Artista: {artwork_data['artist']}
+Titolo: "{artwork_data['title']}"
+Anno: {artwork_data['year']}
+Tecnica: {artwork_data['style']}
 
-    ## FATTI DA INTEGRARE NELLA NARRAZIONE:
-    {artwork_specific_facts}
+FATTI SPECIFICI:
+{artwork_specific_facts}
 
-    ## STRUTTURA NARRATIVA:
+## ISTRUZIONI:
+1. **LUNGHEZZA**: 120-150 parole MAX
+2. **STRUTTURA**: 3 paragrafi brevi separati da riga vuota
+3. **CONTENUTO**: Solo i fatti sopra, NIENTE ALTRO
+4. **STILE**: Frasi brevi (max 12 parole), dirette, senza ornamenti
 
-    **INTRODUZIONE** (3-4 frasi)
-    Presenta l'opera: {artwork_data['artist']}, "{artwork_data['title']}" ({artwork_data['year']})
-    Contesto tecnico e artistico
-    Scopo o committenza (se rilevante)
+## COSA INCLUIRE (KEY CONCEPTS):
+- Tutti i dati dell'artista, titolo, anno, tecnica
+- Ogni fatto specifico dall'elenco
+- Il significato simbolico se presente nei fatti
 
-    **DESCRIZIONE** (4-5 frasi)  
-    Descrivi ciò che si vede, collegando gli elementi
-    Fai riferimento a composizione, colori, figure
-    Mostra, non elencare
+## COSA ESCLUDERE (INFORMAZIONI SUPERFLUE):
+- ❌ NESSUNA biografia dell'artista
+- ❌ NESSUN contesto storico
+- ❌ NESSUN aggettivo descrittivo (bello, interessante, affascinante)
+- ❌ NESSUNA metafora o paragone
+- ❌ NESSUNA opinione personale
+- ❌ NESSUNA frase come "si tratta di", "rappresenta un esempio"
+- ❌ NESSUN collegamento con altre opere
+- ❌ NESSUN approfondimento sui movimenti artistici
 
-    **INTERPRETAZIONE** (3-4 frasi)
-    Spiega il significato in modo narrativo
-    Collega gli elementi visivi al loro simbolismo
-    Conclusione sul messaggio dell'opera
+## ESEMPIO DI FORMATO CORRETTO:
+Artista, "Titolo" (anno). Tecnica.
 
-    ## TONO E STILE:
-    - **Narrativo**, non didattico
-    - **Coeso**, non frammentato
-    - **Descrittivo**, non elencativo
-    - **Informale ma preciso**, non accademico
+Elemento visivo 1. Elemento visivo 2. Elemento visivo 3.
 
-    ## ESEMPIO DI APPROCCIO NARRATIVO:
+Significato 1. Significato 2.
 
-    Invece di: "L'artista è X. L'opera è del Y. Rappresenta Z."
-
-    Scrivi: "Realizzata da X nel Y, l'opera si presenta come Z, offrendo allo spettatore..."
-
-    Invece di: "Elemento A. Elemento B. Elemento C."
-
-    Scrivi: "La composizione si articola attorno ad A, mentre B e C completano la scena, creando..."
-
-    ## EVITA ASSOLUTAMENTE:
-    - Elenchi puntati nella narrazione
-    - Frasi staccate e sconnesse
-    - Il tono da "quiz" o "domanda-risposta"
-    - Ripetizione meccanica dei fatti
-
-    ## RICORDA:
-    Tutte le informazioni dell'elenco DEVONO comparire, ma MESCOLATE nella narrazione in modo naturale.
-
-    ## ORA SCRIVI:
-    """
+## SCRIVI ORA LA DESCRIZIONE CONCISA:
+"""
             
             description = self._call_openrouter_api(prompt)
             
             if description:
-                description = description.replace('**', '').replace('*', '').strip()
-                
-                # Verifica che sia effettivamente narrativa (controllo leggero)
-                # Conta le frasi - se sono troppo poche o troppo frammentate
-                sentences = description.replace('\n', ' ').split('. ')
-                
-                # Se ci sono troppe frasi molto brevi (<5 parole), potrebbe essere un elenco
-                short_sentences = sum(1 for s in sentences if len(s.split()) < 5)
-                
-                if short_sentences > len(sentences) / 2:  # Se più della metà sono frasi brevissime
-                    # Probabile elenco, ma comunque la restituiamo
-                    print("Nota: descrizione potrebbe essere troppo frammentata")
-                
-                return description
-            else:
-                return artwork_data['standard_description']
+                description = description.replace('**', '')
+            return description if description else artwork_data['standard_description']
         else:
             return artwork_data['standard_description']
