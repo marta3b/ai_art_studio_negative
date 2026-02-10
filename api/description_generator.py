@@ -51,6 +51,27 @@ class DescriptionGenerator:
     def _call_openrouter_api(self, prompt, retries=3):
         for attempt in range(retries):    
             try:
+                messages = [
+                    {
+                        "role": "system",
+                        "content": """Sei una guida museale esperta. 
+    Il tuo compito è scrivere descrizioni CONCISE ma COMPLETE delle opere.
+    Le tue descrizioni devono:
+    - Contenere tutti i concetti chiave
+    - Essere fluide e di facile lettura
+    - Eliminare informazioni superflue
+    - Avere circa 200 parole in 3 paragrafi
+    - Usare un tono informativo ma accessibile
+
+    Non aggiungere biografie, contesto storico esteso o aggettivi eccessivi.
+    Concentrati sull'opera specifica."""
+                    },
+                    {
+                        "role": "user", 
+                        "content": prompt
+                    }
+                ]
+                
                 response = requests.post(
                     url=self.api_url,
                     headers={
@@ -61,9 +82,10 @@ class DescriptionGenerator:
                     },
                     data=json.dumps({
                         "model": "openai/gpt-4o-mini-2024-07-18",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 400,
-                        "temperature": 0.2
+                        "messages": messages,
+                        "max_tokens": 450,
+                        "temperature": 0.3,
+                        "top_p": 0.9
                     }),
                     timeout=30
                 )
@@ -75,7 +97,7 @@ class DescriptionGenerator:
                     return result["choices"][0]["message"]["content"]
                 else:
                     return None
-                
+                    
             except Exception as e:
                 if attempt < retries - 1:
                     time.sleep(1)
@@ -86,45 +108,49 @@ class DescriptionGenerator:
         if self.use_real_api:
             artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
             
-            # PROMPT PER PERSONALIZZAZIONE NEGATIVA
             prompt = f"""
-Scrivi una descrizione concisa dell'opera d'arte seguendo queste regole:
+    Sei una guida museale esperta. Scrivi una descrizione concisa dell'opera per i visitatori.
 
-**CONTENUTO OBBLIGATORIO (deve includere TUTTO):**
-1. Artista: {artwork_data['artist']}
-2. Titolo: "{artwork_data['title']}"
-3. Anno: {artwork_data['year']}
-4. Tecnica: {artwork_data['style']}
-5. Tutti questi fatti specifici:
-{artwork_specific_facts}
+    **IL TUO COMPITO:**
+    Scrivere una descrizione che:
+    1. Sia CONCISA (circa 200 parole)
+    2. Contenga TUTTI i concetti chiave
+    3. Sia FLUIDA e di facile lettura
+    4. Elimini informazioni superflue
+    5. Sia informativa ma accessibile
 
-**REGOLE DI SCRITTURA (personalizzazione negativa):**
-- Scrivi SOLO le informazioni essenziali
-- Rimuovi TUTTE le informazioni superflue
-- Mantieni OGNI concetto chiave dall'elenco sopra
-- Usa frasi brevi e dirette
-- Non aggiungere contesto storico
-- Non aggiungere biografie
-- Non usare aggettivi descrittivi non necessari
-- Non fare confronti con altre opere
-- Non spiegare movimenti artistici
+    **DATI DELL'OPERA:**
+    - Artista: {artwork_data['artist']}
+    - Titolo: "{artwork_data['title']}"
+    - Data: {artwork_data['year']}
+    - Tecnica: {artwork_data['style']}
 
-**STRUTTURA:**
-1. Primo paragrafo: Identificazione dell'opera (2-3 frasi)
-2. Secondo paragrafo: Descrizione degli elementi visivi (3-4 frasi)
-3. Terzo paragrafo: Significati e simboli (2-3 frasi)
+    **CONCETTI CHIAVE DA INCLUDERE (TUTTI):**
+    {artwork_specific_facts}
 
-**LUNGHEZZA:** Circa 150-200 parole totali
+    **COME SCRIVERE:**
+    - Usa 3 paragrafi brevi
+    - Connetti le idee naturalmente
+    - Descrivi ciò che si vede
+    - Spiega i significati importanti
+    - Mantieni un tono informativo ma piacevole
+    - Non aggiungere: biografie, contesto storico esteso, confronti, aggettivi eccessivi
 
-**ESEMPIO DI STILE:**
-"Artista, 'Titolo' (anno). Tecnica.
+    **STRUTTURA SUGGERITA:**
+    1. **Introduzione**: Presenta l'opera (artista, titolo, data, tecnica)
+    2. **Descrizione**: Cosa mostra il dipinto, composizione, elementi visivi
+    3. **Significato**: Simboli, riferimenti, importanza dell'opera
 
-Elemento visivo 1. Elemento visivo 2. Elemento visivo 3.
+    **ESEMPIO DI TONO:**
+    "Dipinta da [artista] nel [anno], '[titolo]' è realizzata [tecnica]. L'opera mostra [scena principale], con [elemento 1] e [elemento 2]. [Descrizione fluida]. [Significato chiave]."
 
-Significato 1. Significato 2."
+    **RICORDA:**
+    Sei una guida che vuole far capire l'opera rapidamente. 
+    Includi ogni concetto chiave ma in modo naturale.
+    Sii conciso ma non frettoloso.
 
-**Scrivi ora la descrizione concisa:**
-"""
+    **Scrivi ora la descrizione:**
+    """
             
             description = self._call_openrouter_api(prompt)
             
