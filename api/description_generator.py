@@ -92,7 +92,11 @@ class DescriptionGenerator:
                 return None
     
     def get_negative_personalized_description(self, artwork_data):
+        print("🔴" * 50)
+        print(f"ARTWORK: {artwork_data['title']}")
+        print(f"USE REAL API: {self.use_real_api}")
         if self.use_real_api:
+            print("🟢 CHIAMANDO L'API...")
             artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
             prompt = f"""
 Sei una guida museale esperta. Scrivi una descrizione COMPLETA ma CONCENTRATA dell'opera d'arte.
@@ -164,8 +168,8 @@ Ma non aggiungere NIENTE di più. La descrizione deve essere completa nei conten
 """
             description = self._call_openrouter_api(prompt)
             if description:
+                print(f"✅ API SUCCESS - {len(description)} caratteri")
                 description = description.replace('**', '')
-                print(f"✅ API SUCCESS - Description length: {len(description)} chars")
             return description if description else artwork_data['standard_description']
         else:
             return artwork_data['standard_description']
