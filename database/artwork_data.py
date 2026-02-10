@@ -32,16 +32,16 @@ visive di simboli che emergono dalla profondità dell'anima umana" (Lajos Német
 """
     },
     {
-        "id": "24610-moneylen.jpg",
-        "title": "Il cambiavalute e sua moglie", 
-        "artist": "Quentin Massys",
-        "year": "1514",
-        "style": "Olio su tavola, 71 x 68 cm",
-        "image_url": "24610-moneylen.jpg",
-        "standard_description": """
+ "id": "24610-moneylen.jpg",
+    "title": "Il cambiavalute e sua moglie", 
+    "artist": "Quentin Massys",
+    "year": "1514",
+    "style": "Olio su tavola, 71 x 68 cm",
+    "image_url": "24610-moneylen.jpg",
+    "standard_description": """
 In una certa misura in opposizione ai Romanisti tra i suoi contemporanei, Massys rimase fedele
 alle tradizioni stabilite dall'arte fiamminga primitiva. Tuttavia, le influenze italiane, alle quali fu esposto 
-solo indirettamente, si fanno sentire nella monumentalizzazione delle suas figure.
+solo indirettamente, si fanno sentire nella monumentalizzazione delle sue figure.
 Il Banchiere e sua Moglie è un esempio precoce della pittura di genere che fiorirà nelle Fiandre e nei Paesi Bassi 
 settentrionali nel corso del XVI secolo. Seduti dietro il tavolo, e entrambi parzialmente tagliati su un lato dalla cornice, 
 le figure sono posizionate arretrate rispetto al bordo anteriore del dipinto. Sebbene sofisticate nelle loro sfumature cromatiche, 
@@ -72,8 +72,8 @@ e alcuni rametti sulla fronte formano le corna. Questo ceppo d'albero, privo di 
 rappresenta l'inverno, che non produce nulla di per sé, ma dipende dalle produzioni delle altre stagioni.
 Un piccolo fiore sul suo petto e sopra le sue spalle simboleggia la primavera, così come un mazzo di spighe legato 
 ad alcuni rametti, e un mantello di paglia intrecciata che gli copre le spalle, e due ciliegie pendenti da un ramo 
-che formano il suo orecchio, e deux prugne sulla nuca rappresentano l'estate.
-E due grappoli d'uva pendenti da un rametto, uno bianco e uno rosso, e alcune mele, nascoste tra l'edera 
+che formano il suo orecchio, e due prugne sulla nuca rappresentano l'estate.
+E two grappoli d'uva pendenti da un rametto, uno bianco e uno rosso, e alcune mele, nascoste tra l'edera 
 sempreverde che germoglia dalla sua testa, simboleggiano l'autunno.
 Tra i rami nella testa, uno al centro sta perdendo un po' della sua corteccia, e pezzi di essa sono piegati 
 e stanno cadendo; sull'area bianca di questo ramo è scritto 'ARCIMBOLDUS P.'.
@@ -90,14 +90,12 @@ def initialize_artwork_order():
 
         st.session_state.artwork_order_ids = [ARTWORKS[i]['id'] for i in artwork_indices]
         st.session_state.artwork_order_titles = [ARTWORKS[i]['title'] for i in artwork_indices]
-        print(f"DEBUG: Ordine opere randomizzato: {st.session_state.artwork_order}")
 
 def get_artwork_by_index(index): 
     initialize_artwork_order()
     if 0 <= index < len(st.session_state.artwork_order):
         real_index = st.session_state.artwork_order[index]
         artwork = ARTWORKS[real_index]
-        print(f"DEBUG: Index {index} -> Real index {real_index} -> Opera: {artwork['title']}")
         return artwork
     return None
 
@@ -115,81 +113,46 @@ def get_artwork_order_for_database():
     return None
 
 def get_artwork_description(artwork, experimental_group, top_interests):
-    print(f"\n{'='*50}")
-    print(f"DEBUG get_artwork_description")
-    print(f"Artwork: {artwork['title']}")
-    print(f"Gruppo: {experimental_group}")
-    print(f"Interessi: {top_interests}")
-    print(f"{'='*50}")
+    from api.description_generator import DescriptionGenerator
+    generator = DescriptionGenerator()
+   
+    artwork_id = artwork['id']
     
-    try:
-        from api.description_generator import DescriptionGenerator
-        generator = DescriptionGenerator()
-        print(f"DEBUG: DescriptionGenerator importato")
-       
-        artwork_id = artwork['id']
-        
-        # DEBUG cache
-        if 'generated_descriptions' in st.session_state:
-            print(f"DEBUG: Cache trovata con {len(st.session_state.generated_descriptions)} elementi")
-        else:
-            print(f"DEBUG: Nessuna cache trovata")
-        
-        # Inizializza le variabili
-        description = None
-        selected_interest = None
-        
-        # Controlla la cache
-        cached_descriptions = st.session_state.get('generated_descriptions', {})
-        
-        if artwork_id in cached_descriptions:
-            print(f"DEBUG: Opera {artwork_id} trovata in cache")
-            cached = cached_descriptions[artwork_id]
-            same_artwork = (
-                cached.get('artwork_title') == artwork['title'] and
-                cached.get('artwork_artist') == artwork['artist']
-            )
-            same_group = cached.get('experimental_group') == experimental_group
-            same_interests = cached.get('top_interests') == top_interests
-            
-            print(f"DEBUG: Cache check - same_artwork: {same_artwork}, same_group: {same_group}, same_interests: {same_interests}")
+    # Inizializza le variabili
+    description = None
+    selected_interest = None
+    
+    # Controlla la cache
+    cached_descriptions = st.session_state.get('generated_descriptions', {})
+    
+    if artwork_id in cached_descriptions:
+        cached = cached_descriptions[artwork_id]
+        same_artwork = (
+            cached.get('artwork_title') == artwork['title'] and
+            cached.get('artwork_artist') == artwork['artist']
+        )
+        same_group = cached.get('experimental_group') == experimental_group
+        same_interests = cached.get('top_interests') == top_interests
 
-            if same_artwork and same_group and same_interests:
-                print(f"DEBUG: Cache valida, ritorno dalla cache")
-                return cached['description'], cached.get('selected_interest')
-            else:
-                print(f"DEBUG: Cache non valida per i parametri correnti")
+        if same_artwork and same_group and same_interests:
+            return cached['description'], cached.get('selected_interest')
     
-        # Genera nuova descrizione
-        print(f"DEBUG: Generazione nuova descrizione...")
-        description = generator.get_negative_personalized_description(artwork)
-        selected_interest = None
+    # Genera nuova descrizione
+    description = generator.get_negative_personalized_description(artwork)
+    selected_interest = None
         
-        # DEBUG: Controlla cosa è stato restituito
-        if description == artwork['standard_description']:
-            print(f"DEBUG: ATTENZIONE - Usata descrizione standard (fallback)")
-        else:
-            print(f"DEBUG: Descrizione generata, lunghezza: {len(description)} caratteri")
-        
-        # Inizializza cache se non esiste
-        if 'generated_descriptions' not in st.session_state:
-            st.session_state.generated_descriptions = {}
-        
-        # Salva in cache
-        st.session_state.generated_descriptions[artwork_id] = {
-            'description': description,
-            'experimental_group': experimental_group,
-            'top_interests': top_interests,
-            'artwork_title': artwork['title'],
-            'artwork_artist': artwork['artist'],
-            'selected_interest': selected_interest
-        }
-        
-        print(f"DEBUG: Descrizione salvata in cache")
-        return description, selected_interest
-        
-    except Exception as e:
-        print(f"DEBUG ERRORE in get_artwork_description: {type(e).__name__}: {e}")
-        import traceback
-        traceback.print_exc()
-        return artwork['standard_description'], None
+    # Inizializza cache se non esiste
+    if 'generated_descriptions' not in st.session_state:
+        st.session_state.generated_descriptions = {}
+    
+    # Salva in cache
+    st.session_state.generated_descriptions[artwork_id] = {
+        'description': description,
+        'experimental_group': experimental_group,
+        'top_interests': top_interests,
+        'artwork_title': artwork['title'],
+        'artwork_artist': artwork['artist'],
+        'selected_interest': selected_interest
+    }
+    
+    return description, selected_interest

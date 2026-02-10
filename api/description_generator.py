@@ -9,13 +9,7 @@ class DescriptionGenerator:
     def __init__(self, use_real_api=True):
         self.use_real_api = use_real_api
         if self.use_real_api:
-            try:
-                self.api_key = st.secrets["openrouter"]["api_key"]
-                print(f"DEBUG: API Key trovata (primi 10 caratteri): {self.api_key[:10]}...")
-            except Exception as e:
-                print(f"DEBUG ERRORE: API Key non trovata: {e}")
-                self.api_key = None
-                
+            self.api_key = st.secrets["openrouter"]["api_key"]
             self.api_url = "https://openrouter.ai/api/v1/chat/completions"
     
     def _get_artwork_specific_facts(self, artwork_id):
@@ -59,38 +53,8 @@ class DescriptionGenerator:
         return facts_map.get(artwork_id)
     
     def _call_openrouter_api(self, prompt, retries=3):
-        print(f"\n{'='*50}")
-        print(f"DEBUG OPENROUTER API CALL")
-        print(f"{'='*50}")
-        
-        # DEBUG: Controlla se abbiamo l'API key
-        if not self.api_key:
-            print("DEBUG ERRORE: Nessuna API key disponibile")
-            return None
-            
         for attempt in range(retries):    
             try:
-                print(f"DEBUG: Tentativo {attempt + 1}/{retries}")
-                print(f"DEBUG: Model: openai/gpt-4o-mini-2024-07-18")
-                print(f"DEBUG: Prompt length: {len(prompt)} caratteri")
-                print(f"DEBUG: Prompt preview:\n{prompt[:300]}...\n")
-                
-                # Prepara la richiesta
-                data = {
-                    "model": "openai/gpt-4o-mini-2024-07-18",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    "max_tokens": 1000,
-                    "temperature": 0.7
-                }
-                
-                print(f"DEBUG: Invio richiesta a {self.api_url}")
-                start_time = time.time()
-                
                 response = requests.post(
                     url=self.api_url,
                     headers={
@@ -99,66 +63,37 @@ class DescriptionGenerator:
                         "HTTP-Referer": "https://artestudio.streamlit.app/",
                         "X-Title": "Arte studio",
                     },
-                    data=json.dumps(data),
+                    data=json.dumps({
+                        "model": "openai/gpt-4o-mini-2024-07-18",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        "max_tokens": 1000,
+                        "temperature": 0.7
+                    }),
                     timeout=60
                 )
                 
-                end_time = time.time()
-                print(f"DEBUG: Tempo risposta: {end_time - start_time:.2f} secondi")
-                print(f"DEBUG: Status code: {response.status_code}")
-                
-                # Controlla lo status
                 response.raise_for_status()
+                result = response.json()
+                if "choices" in result and result["choices"]:
+                    return result["choices"][0]["message"]["content"]
+                else:
+                    raise ValueError("Risposta API priva del campo 'choices'")
                 
-                # Prova a parsare la risposta
-                try:
-                    result = response.json()
-                    print(f"DEBUG: Risposta JSON ricevuta")
-                    
-                    if "choices" in result and result["choices"]:
-                        content = result["choices"][0]["message"]["content"]
-                        print(f"DEBUG: Successo! Contenuto ricevuto ({len(content)} caratteri)")
-                        print(f"DEBUG: Primi 200 caratteri:\n{content[:200]}...\n")
-                        return content
-                    else:
-                        print(f"DEBUG ERRORE: Risposta senza 'choices'")
-                        print(f"DEBUG: Risposta completa: {json.dumps(result, indent=2)}")
-                        raise ValueError("Risposta API priva del campo 'choices'")
-                        
-                except json.JSONDecodeError as e:
-                    print(f"DEBUG ERRORE: JSON non valido nella risposta")
-                    print(f"DEBUG: Risposta text: {response.text[:500]}")
-                    raise e
-                
-            except requests.exceptions.Timeout:
-                print(f"DEBUG ERRORE: Timeout dopo 60 secondi")
-                if attempt < retries - 1:
-                    print(f"DEBUG: Ritento tra 2 secondi...")
-                    time.sleep(2)
-                    continue
-                    
-            except requests.exceptions.RequestException as e:
-                print(f"DEBUG ERRORE: Errore di connessione: {e}")
-                if attempt < retries - 1:
-                    time.sleep(2)
-                    continue
-                    
             except Exception as e:
-                print(f"DEBUG ERRORE: Errore generico: {type(e).__name__}: {e}")
                 if attempt < retries - 1:
                     time.sleep(2)
                     continue
-        
-        print(f"DEBUG: Tutti i tentativi falliti")
-        return None
+                print(f"[OpenRouter API Error] {e}")
+                return None
     
     def get_negative_personalized_description(self, artwork_data):
-        print(f"\n{'='*50}")
-        print(f"DEBUG: Generazione descrizione per: {artwork_data['title']}")
-        print(f"{'='*50}")
         if self.use_real_api:
             artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
-            print(f"DEBUG: Facts ottenuti: {artwork_specific_facts[:100]}...")
             prompt = f"""
 Sei una guida museale esperta. Scrivi una descrizione COMPLETA ma CONCENTRATA dell'opera d'arte.
 
