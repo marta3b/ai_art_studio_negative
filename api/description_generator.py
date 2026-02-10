@@ -95,73 +95,72 @@ class DescriptionGenerator:
         if self.use_real_api:
             artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
             prompt = f"""
-Sei una guida museale esperta. Crei descrizioni FOCALIZZATE e ESSENZIALI di opere d'arte, rimuovendo tutte le informazioni superflue.
+Sei una guida museale esperta. Scrivi una descrizione COMPLETA ma CONCENTRATA dell'opera d'arte.
 
-STRUTTURA OBBLIGATORIA (3-4 PARAGRAFI)
+STRUTTURA OBBLIGATORIA (3 PARAGRAFI):
 
-PARAGRAFO 1 - Identificazione essenziale (3-4 frasi)
-- Artista, titolo, anno, tecnica, dimensioni
-- Solo movimento artistico PRINCIPALE (nessun contesto storico esteso)
-- Committenza SOLO se rilevante per l'interpretazione
+PARAGRAFO 1 - Identificazione di base (3-4 frasi)
+- Inizia con: {artwork_data['artist']}, "{artwork_data['title']}" ({artwork_data['year']})
+- Poi: {artwork_data['style']}
+- Menziona il movimento artistico principale SENZA approfondire il contesto storico
+- Se c'è una committenza specifica, menzionala brevemente
 
-PARAGRAFO 2 - Analisi visiva selettiva (5-6 frasi totali)
-- Descrizione SOLO degli elementi visivi MENSIONATI nelle informazioni specifiche
-- Composizione essenziale senza dettagli superflui
-- Solo dettagli tecnici PERTINENTI all'opera
-- Solo particolarità formali SIGNIFICATIVE
+PARAGRAFO 2 - Descrizione visiva essenziale (4-5 frasi)
+- Descrivi SOLO gli elementi visivi presenti in queste informazioni:
+{artwork_specific_facts}
+- Non aggiungere dettagli visivi che non sono elencati sopra
+- Descrivi la composizione in modo semplice
+- Menziona i colori e la tecnica solo se rilevanti per l'opera
 
-PARAGRAFO 3 - Significato focalizzato (4-5 frasi)
-- Interpretazione simbolica SOLO degli elementi presenti nell'opera
-- Temi iconografici PRINCIPALI (massimo 2-3)
-- Solo riferimenti culturali DIRETTAMENTE collegati
+PARAGRAFO 3 - Significato e interpretazione (3-4 frasi)
+- Spiega SOLO i significati simbolici presenti in queste informazioni:
+{artwork_specific_facts}
+- Non aggiungere interpretazioni personali o teorie non basate sui fatti forniti
+- Mantieni l'interpretazione focalizzata sull'opera specifica
 
-LUNGHEZZA: 250-300 parole (CONCISA ma COMPLETA)
+LUNGHEZZA TOTALE: 200-250 parole (CONCISA ma INFORMATIVA)
 
-VINCOLI ASSOLUTI
+COSA DEVI ASSOLUTAMENTE INCLUIRE:
+1. Tutte le informazioni da: {artwork_specific_facts}
+2. Ogni dato tecnico, numerico o fattuale menzionato
+3. Ogni elemento simbolico o interpretativo elencato
+4. La struttura base: identificazione → descrizione → significato
 
-OBBLIGATORIO (NECESSARIO PER RISPONDERE ALLE DOMANDE):
-- Includere TUTTI i fatti specifici da: {artwork_specific_facts}
-- Ogni numero/data/tecnica deve essere esatta
-- Ogni elemento simbolico menzionato deve essere spiegato
-- Struttura logica: identificazione → descrizione → significato
-- Informazioni SUFFICIENTI per rispondere a domande su:
-  * Identificazione artista/titolo/anno
-  * Tecnica e materiali
-  * Elementi visivi specifici
-  * Significati simbolici chiave
-  * Committenza/destinazione (se rilevante)
+COSA NON DEVI INCLUIRE (INFORMAZIONI SUPERFLUE):
+1. Biografia dell'artista non collegata a questa opera specifica
+2. Confronti con altre opere dello stesso artista o di altri
+3. Contesto storico esteso che non serve a capire l'opera
+4. Analogie, metafore o paragoni non necessari
+5. Aggettivi descrittivi eccessivi (bello, magnifico, straordinario)
+6. Informazioni ripetitive o ridondanti
+7. Teorie interpretative non basate sui fatti forniti
+8. Riferimenti a movimenti artistici secondari o minori
 
-SEVERAMENTE VIETATO (INFORMAZIONI SUPERFLUE):
-- Biografia dell'artista non collegata all'opera
-- Confronti con altre opere dello stesso artista
-- Contesti storici estesi non pertinenti
-- Analogie con altre opere o artisti
-- Aggettivi descrittivi non necessari
-- Informazioni ripetitive o ridondanti
-- Riferimenti a movimenti artistici secondari
-- Descrizioni di elementi non visibili o non menzionati
-- Teorie interpretative non basate sui fatti forniti
+COME SCRIVERE:
+- Frasi chiare e dirette
+- Linguaggio accessibile ma preciso
+- Ogni frase deve contenere informazioni utili
+- Mantieni un tono neutro e informativo
+- Evita il linguaggio troppo accademico o complesso
 
-STRATEGIA DI CONTENUTO:
-1. Solo fatti VERIFICABILI dalle informazioni fornite
-2. Solo elementi VISIBILI nell'opera
-3. Solo interpretazioni BASATE SUI DATI
-4. Nessuna speculazione o ipotesi
-5. Nessuna informazione "interessante ma non essenziale"
+OBBIETTIVO:
+Questa descrizione deve permettere a qualcuno di:
+1. Riconoscere l'opera e l'artista
+2. Descrivere gli elementi visivi principali
+3. Comprendere i significati simbolici chiave
+4. Rispondere a domande specifiche sui dettagli dell'opera
 
-DATI OBBLIGATORI DA INCLUDERE:
-Titolo: {artwork_data['title']} (esatto)
-Artista: {artwork_data['artist']} (nome completo)
-Anno: {artwork_data['year']} (esatto)
-Tecnica/Dimensioni: {artwork_data['style']} (preciso)
+DATI DELL'OPERA DA INCLUIRE:
+Titolo: {artwork_data['title']}
+Artista: {artwork_data['artist']}
+Anno: {artwork_data['year']}
+Tecnica/Dimensioni: {artwork_data['style']}
 
-INFORMAZIONI SPECIFICHE ASSOLUTAMENTE NECESSARIE:
+RICORDA:
+Devi includere TUTTE queste informazioni specifiche:
 {artwork_specific_facts}
 
-IMPORTANTE: Questa descrizione sarà usata per un test di memoria. Deve contenere 
-TUTTE le informazioni necessarie per rispondere a domande specifiche sull'opera, 
-ma NIENTE di più. La concisione è fondamentale, ma la completezza dei concetti chiave 
-è essenziale.
+Ma non aggiungere NIENTE di più. La descrizione deve essere completa nei contenuti essenziali ma priva di informazioni superflue.
 """
             description = self._call_openrouter_api(prompt)
             if description:
