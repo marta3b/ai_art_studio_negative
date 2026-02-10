@@ -115,31 +115,38 @@ class DescriptionGenerator:
 Sei una guida museale. Scrivi una descrizione MOLTO CONCISA.
 
 **REGOLE ASSOLUTE:**
-1. Solo fatti, niente interpretazioni
+1. Solo fatti ESSENZIALI per rispondere alle domande di memoria
 2. Niente "invita lo spettatore", "suggerisce", "esplora"
 3. Niente aggettivi come "ricca", "emblematica", "unica"
 4. Niente riflessioni filosofiche
+5. RIMUOVI tutti i dettagli non necessari per il test
+6. MANTIENI TUTTI i concetti chiave che rispondono alle domande del recall
 
 **DATI OBBLIGATORI:**
 {artwork_data['artist']}, "{artwork_data['title']}" ({artwork_data['year']})
 {artwork_data['style']}
 
-**FATTI DA INCLUIRE:**
+**FATTI DA INCLUIRE (solo quelli essenziali per il test):**
 {artwork_specific_facts}
 
-**STRUTTURA:**
-1. Identificazione (2 frasi)
-2. Descrizione visiva (3 frasi)
-3. Significato (2 frasi)
+**STRUTTURA SEMPLIFICATA:**
+1. Identificazione (1 frase)
+2. Elementi visivi CRITICI (2-3 frasi) 
+3. Significati CHIAVE (1-2 frasi)
 
-**ESEMPIO CORRETTO:**
+**OGNI FRASE DEVE CONTENERE SOLO INFORMAZIONI CHE POSSONO ESSERE TESTATE:**
+- Non descrivere elementi che non compaiono nelle domande
+- Non aggiungere contesto storico non testato
+- Non menzionare dettagli estetici non valutati
+
+**ESEMPIO CORRETTO (minimo assoluto):**
 "Artista, 'Titolo' (anno). Tecnica.
 
-Elemento 1. Elemento 2. Elemento 3.
+Elemento chiave 1. Elemento chiave 2.
 
-Significato 1. Significato 2."
+Significato chiave 1."
 
-**Scrivi ora:**
+**Scrivi ora la descrizione più concisa possibile mantenendo tutte le risposte alle domande:**
 """
             
             description = self._call_openrouter_api(prompt)
