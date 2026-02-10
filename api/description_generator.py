@@ -53,52 +53,86 @@ class DescriptionGenerator:
         return facts_map.get(artwork_id)
     
     def _call_openrouter_api(self, prompt, retries=3):
-        for attempt in range(retries):    
-            try:
-                response = requests.post(
-                    url=self.api_url,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                        "HTTP-Referer": "https://artestudio.streamlit.app/",
-                        "X-Title": "Arte studio",
-                    },
-                    data=json.dumps({
-                        "model": "openai/gpt-4o-mini-2024-07-18",
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                        "max_tokens": 1000,
-                        "temperature": 0.7
-                    }),
-                    timeout=60
-                )
+     print(f"\n📡 _call_openrouter_api chiamata (retries={retries})")
+    
+     for attempt in range(retries):
+        print(f"📡 Tentativo {attempt + 1}/{retries}")
+        
+        try:
+            print(f"📡 URL: {self.api_url}")
+            print(f"📡 API Key: {self.api_key[:10]}...")  # Solo primi 10 caratteri
+            
+            response = requests.post(
+                url=self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://artestudio.streamlit.app/",
+                    "X-Title": "Arte studio",
+                },
+                data=json.dumps({
+                    "model": "openai/gpt-4o-mini-2024-07-18",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "max_tokens": 1000,
+                    "temperature": 0.7
+                }),
+                timeout=60
+            )
+            
+            print(f"📡 Status Code: {response.status_code}")
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            print(f"📡 Response keys: {result.keys()}")
+            
+            if "choices" in result and result["choices"]:
+                content = result["choices"][0]["message"]["content"]
+                print(f"✅ API SUCCESS - Contenuto ricevuto ({len(content)} caratteri)")
+                return content
+            else:
+                print(f"❌ API ERROR: No 'choices' in response")
+                print(f"Response completa: {result}")
+                raise ValueError("Risposta API priva del campo 'choices'")
                 
-                response.raise_for_status()
-                result = response.json()
-                if "choices" in result and result["choices"]:
-                    return result["choices"][0]["message"]["content"]
-                else:
-                    raise ValueError("Risposta API priva del campo 'choices'")
-                
-            except Exception as e:
-                if attempt < retries - 1:
-                    time.sleep(2)
-                    continue
-                print(f"[OpenRouter API Error] {e}")
-                return None
+        except requests.exceptions.Timeout:
+            print(f"❌ Timeout al tentativo {attempt + 1}")
+        except requests.exceptions.HTTPError as e:
+            print(f"❌ HTTP Error {e.response.status_code}: {e.response.text[:200]}")
+        except Exception as e:
+            print(f"❌ General Error: {type(e).__name__}: {str(e)[:200]}")
+        
+        if attempt < retries - 1:
+            print(f"⏳ Attesa 2 secondi prima di ritentare...")
+            time.sleep(2)
+    
+     print("❌ Tutti i tentativi API falliti")
+     return None
     
     def get_negative_personalized_description(self, artwork_data):
-        print("🔴" * 50)
-        print(f"ARTWORK: {artwork_data['title']}")
-        print(f"USE REAL API: {self.use_real_api}")
-        if self.use_real_api:
-            print("🟢 CHIAMANDO L'API...")
-            artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
-            prompt = f"""
+     print("\n" + "🔥" * 60)
+     print(f"🔥 get_negative_personalized_description chiamato per: {artwork_data['title']}")
+     print(f"🔥 self.use_real_api = {self.use_real_api}")
+     print(f"🔥 API Key presente? {'SI' if hasattr(self, 'api_key') and self.api_key else 'NO'}")
+    
+     if self.use_real_api:
+        print("🔥 MODALITÀ API ATTIVA - Genererò con prompt negativo")
+        
+        # FORZA il debug nel frontend Streamlit
+        import streamlit as st
+        with st.spinner("🔄 Generando descrizione con API..."):
+            st.write(f"DEBUG: Generando per {artwork_data['title']}")
+        
+        artwork_specific_facts = self._get_artwork_specific_facts(artwork_data['id'])
+        print(f"🔥 FATTI SPECIFICI:\n{artwork_specific_facts}")
+        
+        # CREA IL PROMPT
+        prompt = f"""
 Sei una guida museale esperta. Scrivi una descrizione COMPLETA ma CONCENTRATA dell'opera d'arte.
 
 STRUTTURA OBBLIGATORIA (3 PARAGRAFI):
@@ -122,13 +156,7 @@ PARAGRAFO 3 - Significato e interpretazione (3-4 frasi)
 - Non aggiungere interpretazioni personali o teorie non basate sui fatti forniti
 - Mantieni l'interpretazione focalizzata sull'opera specifica
 
-LUNGHEZZA TOTALE: 200-250 parole (CONCISA ma INFORMATIVA)
-
-COSA DEVI ASSOLUTAMENTE INCLUIRE:
-1. Tutte le informazioni da: {artwork_specific_facts}
-2. Ogni dato tecnico, numerico o fattuale menzionato
-3. Ogni elemento simbolico o interpretativo elencato
-4. La struttura base: identificazione → descrizione → significato
+LUNGHEZZA TOTALE: 150-200 parole (CONCISA ma INFORMATIVA)
 
 COSA NON DEVI INCLUIRE (INFORMAZIONI SUPERFLUE):
 1. Biografia dell'artista non collegata a questa opera specifica
@@ -140,36 +168,37 @@ COSA NON DEVI INCLUIRE (INFORMAZIONI SUPERFLUE):
 7. Teorie interpretative non basate sui fatti forniti
 8. Riferimenti a movimenti artistici secondari o minori
 
-COME SCRIVERE:
-- Frasi chiare e dirette
-- Linguaggio accessibile ma preciso
-- Ogni frase deve contenere informazioni utili
-- Mantieni un tono neutro e informativo
-- Evita il linguaggio troppo accademico o complesso
-
-OBBIETTIVO:
-Questa descrizione deve permettere a qualcuno di:
-1. Riconoscere l'opera e l'artista
-2. Descrivere gli elementi visivi principali
-3. Comprendere i significati simbolici chiave
-4. Rispondere a domande specifiche sui dettagli dell'opera
-
-DATI DELL'OPERA DA INCLUIRE:
-Titolo: {artwork_data['title']}
-Artista: {artwork_data['artist']}
-Anno: {artwork_data['year']}
-Tecnica/Dimensioni: {artwork_data['style']}
-
 RICORDA:
 Devi includere TUTTE queste informazioni specifiche:
 {artwork_specific_facts}
 
 Ma non aggiungere NIENTE di più. La descrizione deve essere completa nei contenuti essenziali ma priva di informazioni superflue.
 """
-            description = self._call_openrouter_api(prompt)
-            if description:
-                print(f"✅ API SUCCESS - {len(description)} caratteri")
-                description = description.replace('**', '')
-            return description if description else artwork_data['standard_description']
+        
+        print(f"🔥 PROMPT creato ({len(prompt)} caratteri)")
+        print(f"🔥 Primi 500 caratteri del prompt:\n{prompt[:500]}...")
+        
+        # CHIAMA API
+        description = self._call_openrouter_api(prompt)
+        
+        if description:
+            print(f"✅ API SUCCESS! Descrizione generata ({len(description)} caratteri)")
+            print(f"📄 ANTEPRIMA:\n{description[:300]}...")
+            
+            # Pulisci formattazione markdown
+            description = description.replace('**', '').replace('*', '').replace('#', '')
+            
+            # VERIFICA che sia diversa dalla standard
+            if len(description) < 500:  # Se è corta = probabilmente corretta
+                print("🎯 DESCRIZIONE BREVE - Probabilmente corretta!")
+            else:
+                print("⚠️ DESCRIZIONE LUNGA - Potrebbe essere la standard")
+                
+            return description
         else:
+            print("❌ API FAILED - Restituisco descrizione standard")
             return artwork_data['standard_description']
+            
+     else:
+        print("🧪 MODALITÀ TEST - Restituisco descrizione standard")
+        return artwork_data['standard_description']
