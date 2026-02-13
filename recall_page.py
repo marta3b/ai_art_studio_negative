@@ -435,8 +435,9 @@ def render():
                         
                         L'obiettivo è determinare se approcci descrittivi alternativi possano migliorare l'apprendimento e la memorizzazione dell'arte. 
                     
-                    **Nota tecnica:** Tutti i partecipanti hanno completato il questionario sugli interessi per uniformità metodologica, 
-                                      ma i tuoi interessi specifici **non sono stati utilizzati** per personalizzare le descrizioni che hai letto.
+                    **Nota tecnica:** Tutti i partecipanti hanno completato il questionario sugli interessi 
+                    per uniformità metodologica, ma i tuoi interessi specifici **non sono stati utilizzati** 
+                    per personalizzare le descrizioni che hai letto.
                                         """)
                     
                     st.markdown("""
